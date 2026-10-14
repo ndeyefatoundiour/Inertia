@@ -1,0 +1,89 @@
+services:
+
+  # ─── Application PHP-FPM ───
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gestion_groupes_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+    environment:
+      - APP_ENV=local
+    networks:
+      - gestion_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ─── Nginx (serveur web) ───
+  nginx:
+    image: nginx:alpine
+    container_name: gestion_groupes_nginx
+    restart: unless-stopped
+    ports:
+      - "8002:80"     # ⚠️ 8002 car 80 et 8001 sont déjà pris
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - gestion_net
+    depends_on:
+      - app
+
+  # ─── MySQL ───
+  mysql:
+    image: mysql:8.4
+    container_name: gestion_groupes_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: gestion_groupes
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: laravel
+    ports:
+      - "3307:3306"   # ⚠️ 3307 car 3306 est pris par ton MySQL système
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - gestion_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ularavel", "-plaravel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Adminer (interface web BDD) ───
+  adminer:
+    image: adminer:latest
+    container_name: gestion_groupes_adminer
+    restart: unless-stopped
+    ports:
+      - "8089:8080"   # ⚠️ 8089 car 8088 est pris par e-senegal
+    networks:
+      - gestion_net
+
+  # ─── Node (Vite dev, optionnel) ───
+  vite:
+    image: node:22-alpine
+    container_name: gestion_groupes_vite
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5174:5173"   # ⚠️ 5174 car 5173 est déjà utilisé
+    volumes:
+      - ./:/app
+    networks:
+      - gestion_net
+    profiles:
+      - dev           # ⚠️ Ne démarre que si on lance avec --profile dev
+
+volumes:
+  mysql_data:
+
+networks:
+  gestion_net:
+    driver: bridge
