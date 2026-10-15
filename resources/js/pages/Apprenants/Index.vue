@@ -1,31 +1,25 @@
-<script setup lang="ts">
+<script setup>
 import EmptyLayout from '@/layouts/EmptyLayout.vue';
 defineOptions({ layout: EmptyLayout });
 
 import { useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-interface Apprenant {
-    id: number;
-    nomComplet: string;
-    sexe: 'M' | 'F';
-    niveau: number;
-    groupe_id: number | null;
-    groupe?: { id: number; numero: number; niveau: number } | null;
-}
+// Props passées depuis le contrôleur Laravel
+const props = defineProps({
+    apprenants: {
+        type: Array,
+        default: () => [],
+    },
+    groupes: {
+        type: Array,
+        default: () => [],
+    },
+});
 
-interface Groupe {
-    id: number;
-    numero: number;
-    niveau: number;
-    apprenants: Apprenant[];
-}
-
-const props = defineProps<{
-    apprenants: Apprenant[];
-    groupes: Groupe[];
-}>();
-
+/* ============================================
+   FORMULAIRE APPRENANT (useForm)
+   ============================================ */
 const formApprenant = useForm({
     nomComplet: '',
     sexe: 'M',
@@ -40,6 +34,9 @@ const enregistrer = () => {
     });
 };
 
+/* ============================================
+   FORMULAIRE GROUPES (useForm)
+   ============================================ */
 const formGroupes = useForm({ taille: 3 });
 
 const genererGroupes = () => {
@@ -49,8 +46,15 @@ const genererGroupes = () => {
     });
 };
 
-const totalGarcons = computed(() => props.apprenants.filter((a) => a.sexe === 'M').length);
-const totalFilles = computed(() => props.apprenants.filter((a) => a.sexe === 'F').length);
+/* ============================================
+   STATS CALCULÉES
+   ============================================ */
+const totalGarcons = computed(
+    () => props.apprenants.filter((a) => a.sexe === 'M').length,
+);
+const totalFilles = computed(
+    () => props.apprenants.filter((a) => a.sexe === 'F').length,
+);
 </script>
 
 <template>
